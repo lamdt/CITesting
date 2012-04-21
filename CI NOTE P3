@@ -1,0 +1,52 @@
+
+CodeIgniter FrameWork NOTE - lamdt
+__________________________________________________
+
+
+6. Lưu hằng trong CI:
+- Được lưu tại application/config/constants.php
+- define([tên hằng],[giá trị]);
+- VD: define('MYTABLE','entries');
+
+7. Model class
+- Lưu tại application/models/
+- Khai báo tại controllers theo cú pháp
+	$this->load->model([tên file model]);
+- Có thể nhóm các model của cùng 1 modul vào 1 sub-folder tại models/
+	Khi đó khai báo sẽ là $this->load->model([tên sub-folder]/[tên file model]);
+	
+- Class trong Model bắt buộc phải có:
+
+function __construct()
+	{
+		parent::__construct();
+	}
+
+
+	
+8. Controller Class:
+- Lưu tại application/controllers/
+- Truy xuất url có dạng: http://...index.php/[tên class controllers].
+
+=> Chú ý có thể truy xuất trực tiếp tới các function trong class controller/
+Url có dạng http://...index.php/[tên class controllers]/[tên function]/[tham số 1]/[tham số 2]/[tham số n]/
+
+- VD: Với class trong controller có code như:
+
+<?php
+class Products extends CI_Controller {
+
+    public function shoes($sandals, $id)
+    {
+        echo $sandals;
+        echo $id;
+    }
+}
+?> 
+
+url tới nó: index.php/prouducts/shoes/bitis/3 với $sandals = 'bitis', $id = '3'
+
+~~> Có thể thay thế phương thức GET bình thường:
+~~> SEO tốt hơn
+
+

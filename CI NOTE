@@ -1,0 +1,164 @@
+
+CodeIgniter FrameWork NOTE - lamdt
+__________________________________________________
+
+CI sử dụng kiến trúc MVC
+- M = Models: Chứa các files xử lý
+- V = Views: Chứa các files hiển thị.
+- C = Controllers: Chứa các file điều hướng+ xử lý.
+MVC đã được thông đít với nhau nên tại chỗ nào cũng có thể khai báo được class ở các chỗ còn lại
+
+LƯU Ý:
+- TÊN CỦA CLASS Ở CONTROLLER PHẢI TRÙNG VỚI TÊN FILE PHP nếu không xảy ra lỗi 404
+- TÊN CỦA CLASS Ở MODEL PHẢI TRÙNG VỚI TÊN FILE PHP
+- TÊN CLASS PHẢI VIẾT HOA CHỮ CÁI ĐẦU
+- KHAI BÁO THƯ VIỆN dùng $this->load->libary([thư viện])
+
+Config database tại: application/config/database.php
+Kết nối db tại: application/config/autoload.php
+	Dòng $autoload['libraries'] = array('');
+	Sửa thành: $autoload['libraries'] = array('database'); nếu chưa có.
+
+1. Hello World:
+
+a. Controller:
+	- Gọi file ở views/: $this->load->view([ten file]);
+	- VD:
+	
+	+ Code tại controllers/hello.php
+
+<?php
+	class Hello extends CI_Controller {
+
+		function index()
+		{
+			$this->load->view('hello_view'); //Gọi file hello_view.php tại views/
+		}
+	}
+?>
+
+	
+b. View:
+	- Chứa nội dung hiển thị (code html, php echo,...)
+
+	+ Code tại views/hello_view.php
+	
+	<?php
+	echo "Hello World!"; //Nội dung hiển thị
+	?>
+	
+	+Run it: index.php/hello
+	
+	url: index.php/[tên file php tại controllers/] //Không có đuôi php
+
+
+2. Work With Form:
+
+a, View:
+
+- Hiển thị form thông tin:
+
+code file views/form_view.php:
+
+<html>
+	<head>
+	<title>My Form</title>
+	</head>
+	<body>
+		
+		// Nếu quá trình validate có xảy ra lỗi thì hàm validation_errors() sẽ hiện thông tin lỗi tại đây
+		<?php echo validation_errors(); ?> 
+		
+		// Kết quả trả về sẽ là tất cả các lỗi sau khi validate trên form.
+		// Nếu chỉ muốn hiện từng lỗi đơn lẻ của từng field để mang vác đi muôn nơi
+		// Dùng hàm form_error([ten field]);
+
+		<?php echo form_open('form'); ?> 
+		// Khởi tạo form
+		// form_open([tên file sẽ xử lý form tại controller/]);
+		// Tương đương với code HTML <form method=post action='controller/form.php' />
+		// Sử dụng thêm hàm set_value([ten field]); 
+		// Để sau khi validate dữ liệu nếu có bị sai thì data vừa nhập cũng vẫn còn nguyên chứ không bị xóa trắng
+		// Hoặc để set giá trị ban đầu cho field theo cấu trúc: set_value([ten field],[Gia tri]);
+
+			<h5>Username</h5>
+			<input type="text" name="username" value="<?php echo set_value('username'); ?>" size="50" />
+			<?php echo form_error(['username']); ?> // Nếu field username có input lỗi thì báo
+			
+			<h5>Password</h5>
+			<input type="text" name="password" value="<?php echo set_value('password'); ?>" size="50" />
+
+			<h5>Password Confirm</h5>
+			<input type="text" name="passconf" value="<?php echo set_value('passconf'); ?>" size="50" />
+
+			<h5>Email Address</h5>
+			<input type="text" name="email" value="<?php echo set_value('email'); ?>" size="50" />
+
+			<div><input type="submit" value="Submit" /></div>
+
+		</form>
+
+	</body>
+</html>
+
+b, Controller:
+
+- Xỷ lý dữ liệu nhận từ form tại views/form_view.php và trả kết quả ở file form_view_success.php
+
+Code file controllers/form.php
+
+<?php
+class Form extends CI_Controller{
+
+	function index()
+	{
+		$this->load->library('form_validation'); //Load thư viện form_validation
+		
+		/* Thiết lập rule cho từng field
+		Cấu trúc:
+		- $this->form_validation->set_rules([ten field],[Mo ta],[tuy chinh]);
+		[ten field]: Tên field đầu vào - name trong form HTM.
+		[tuy chinh]: Cách nhau bởi dấu "|"
+					 required -> Phải nhập giá trị ở field này.
+					 matches[ten field #] -> so sánh giá trị của field hiện tại với field # dùng để -> confirm password
+					 md5 - > mã hóa giá trị của field
+					 valid_email -> K.tra tính hợp lệ của Email.
+					 min_length[n] -> Field phải có ít nhất n ký tự
+					 max_length[n] -> Field có tối đa n ký tự
+					 xss_clean -> Loại bỏ các ký tự nguy hiểm
+					 Xem thêm các tùy chỉnh tại: http://codeigniter.com/user_guide/libraries/form_validation.html#rulereference
+		*/
+		
+		$this->form_validation->set_rules('username', 'Username', 'required|min_length[5]|max_length[12]|is_unique[users.username]');
+		$this->form_validation->set_rules('password', 'Password', 'required|matches[passconf]');
+		$this->form_validation->set_rules('passconf', 'Password Confirmation', 'required');
+		$this->form_validation->set_rules('email', 'Email', 'required|valid_email|is_unique[users.email]');
+		
+		if ($this->form_validation->run() == FALSE) //Kiểm tra hàm validate
+		{
+			//Nếu sai thì load lại form + quá trình validation báo lỗi tại nơi cho phép hiển thị lỗi
+			$this->load->view('form_view');
+		}
+		else
+		{
+			//Nếu chuẩn thì gọi views/form_view_success.php
+			$this->load->view('form_view_success');
+		}
+	}
+}
+?>
+
+Code file views/form_view_success.php
+
+	<?php 
+		echo "Form Submitted <br />";
+		echo anchor('form', 'Try it again!'); //tạo 1 liên kết dạng <a href=".../form.php#">Try it again!</a>
+	?>
+	
+
+c. Trò chơi khác: http://codeigniter.com/user_guide/libraries/form_validation.html#helperreference
+
+
+
+
+ 

@@ -1,0 +1,287 @@
+
+CodeIgniter FrameWork NOTE - lamdt
+__________________________________________________
+
+3. Encrypt Class
+- Dùng để mã hóa thông tin.
+Có 2 loại:
++ Sử dụng key để tạo hash:
+	* key nay do mình tự tạo.
+	* Có khả năng decode.
+	* Mỗi lần tải trang => chuỗi encode thu được lại khác.
+	=> Có thể dùng để mã hóa cookie.
++ Mã hóa SHA1: không thể decode => encrypt password.
+
+- Sử dụng:
+Dùng thư viện encrypt.
+controllers/encrypt.php
+
+<?php 
+//test encrypt class
+
+class Encrypt extends CI_Controller{
+	
+	function index()
+	{	
+		$this->load->view('encrypt_view'); // Để làm gì xem lại part 1
+	}
+	
+	function encode($string)
+	{
+		$this->load->library('encrypt'); 
+		//Gọi thư viện encrypt chứa hàm encode/decode/sha1
+		
+		$key = "yoyo";
+		// key do mình tự tạo.
+		
+		return  $this->encrypt->encode($string,$key);
+		// Hàm encode chuỗi trong thư viện encrypt
+	}
+	
+	function decode($string)
+	{
+		$this->load->library('encrypt');
+		$key = "yoyo";
+		
+		return  $this->encrypt->decode($string,$key);
+		//Hàm decode chuỗi trong thư viện encrypt
+	}
+	
+	function encode_sha1($string)
+	{
+		return  $this->encrypt->sha1($string);
+		//hãm mã hóa SHA1
+	}
+}
+?>
+
+views/encrypt_view.php
+
+<?php 
+	$code = new Encrypt;
+	$string = "lam dang tung";
+	echo "<br /> String encode: ".$code->encode($string);
+	echo "<br /> String decode: ".$code->decode($code->encode($string));
+	echo "<br /> String sha1 encode :".$code->encode_sha1($string);
+?>
+
+
+4. Thao tác với database.
+
+Config database tại: application/config/database.php
+Kết nối db tại: application/config/autoload.php
+	Dòng $autoload['libraries'] = array('');
+	Sửa thành: $autoload['libraries'] = array('database'); nếu chưa có.
+	Từ có thể dùng thư viện database mà không cần load thủ công nhưng kiểu $this->load->library('encrypt'); nữa
+	
+	
+a. Các cấu trúc Select data:
+
+*	Cấu trúc: $query = $this->db->query([query]);
+	Thay cho mysql_query();
+	$query->result() thay cho mysql_result();
+	$query->num_rows() thay cho mysql_num_rows()
+	
+*	Cấu trúc: $this->db->get([tên bảng]); 
+	Để lấy toàn bộ giá trị trong bảng.
+
+	$this->db->get([tên bảng],[a],[b]);
+	= select * from [tên bảng] LIMIT a,b
+
+*	Cấu trúc $this->db->get_where([tên bảng],array([tên cột] => [a]))
+	= select * from [tên bảng] where [tên cột] = 'a'
+
+=> Một số cấu trúc để chia nhỏ các tùy chọn select db
+Có thể dùng trong các tùy chọn cho tìm kiếm.
+
+*	SELECT: Cấu trúc $this->db->select();
+	select cột từ bảng nào đó.
+	Sử dụng:
+	$this->db->select('title, content, date');
+	$query = $this->db->get('mytable');
+	
+	= SELECT title, content, date FROM mytable
+	
+	Nâng cao:
+	*	Cấu trúc: $this->db->select_max();
+		$this->db->select_max('age');
+		$query = $this->db->get('members');
+		= SELECT MAX(age) as age FROM members
+	
+	*	Ngoài ra còn có các hàm: 
+		$this->db->select_min();
+		$this->db->select_avg();
+		$this->db->select_sum();
+
+*	WHERE: Cấu trúc $this->db->where();
+	select trong bảng tại đâu.
+	$this->db->select('title, content, date');
+	$this->db->where('name', $name); 
+	$query = $this->db->get('mytable');
+	
+	= SELECT title, content, date FROM mytable WHERE name = $name
+	
+	Nâng cao:
+	*	Kết hợp nhiều câu lệnh where:
+		$this->db->where('name', $name);
+		$this->db->where('title', $title);
+		$this->db->where('status', $status);
+		
+		= WHERE name = 'Joe' AND title = 'boss' AND status = 'active'  
+	*	Sử dụng toán tử:
+		$this->db->where('name !=', $name);
+		$this->db->where('id <', $id);
+
+		= WHERE name != 'Joe' AND id < 45 
+	*	Chơi với mảng:
+		$array = array('name' => $name, 'title' => $title, 'status' => $status);
+		$this->db->where($array);
+		= WHERE name = 'Joe' AND title = 'boss' AND status = 'active' 
+	*	Chơi với string:
+		$where = "name='Joe' AND status='boss' OR status='active'";
+		$this->db->where($where);
+
+*	Thêm:
+	$this->db->group_by();
+	$this->db->distinct();
+	$this->db->having();
+	$this->db->order_by();
+	$this->db->limit();
+	~~~>http://codeigniter.com/user_guide/database/active_record.html
+
+b. Inserting Data:
+
+*	Kiểu truyền thồng: 
+	$this->db->insert('mytable', $data); 
+	Trong đó $data có thể là 1 mảng:
+	$data = array(
+				   'title' => 'My title' ,
+				   'name' => 'My Name' ,
+				   'date' => 'My date'
+					);
+*	Insert kiểu đánh lẻ: $this->db->set([tên cột], [giá trị]);
+	
+	$this->db->set('name', $name);
+	$this->db->insert('mytable'); 
+	= INSERT INTO mytable (name) VALUES ('{$name}')
+
+c. Updating Data
+
+*	Cách sử dụng, theo mảng:
+	
+	$data = array(
+               'title' => $title,
+               'name' => $name,
+               'date' => $date
+            );
+
+	$this->db->where('id', $id);
+	$this->db->update('mytable', $data);
+
+	// UPDATE mytable
+	// SET title = '{$title}', name = '{$name}', date = '{$date}'
+	// WHERE id = $id
+	
+*	Theo đối tượng:
+
+    class Myclass {
+        var $title = 'My Title';
+        var $content = 'My Content';
+        var $date = 'My Date';
+    }
+
+
+	$object = new Myclass;
+
+	$this->db->where('id', $id);
+	$this->db->update('mytable', $object); 
+	// 2 câu này có thể thay thế bằng
+	 $this->db->update('mytable', $data, "id = 4"); 
+	 cho ngắn gọn
+
+d. Deleting Data:
+*	Sử dụng:
+	$this->db->delete('mytable', array('id' => $id));
+
+	// DELETE FROM mytable
+	// WHERE id = $id
+
+*	$this->db->empty_table();
+	
+	$this->db->empty_table('mytable');
+
+	// = DELETE FROM mytable
+
+*	$this->db->truncate();
+
+	$this->db->truncate('mytable'); 
+	= TRUNCATE mytable 
+	
+
+===>>>> 
+CÓ THỂ KẾT HỢP NHIỀU METHOD:
+Ví dụ: $this->db->select('title')->from('mytable')->where('id', $id)->limit(10, 20);
+= select title from mytable ..
+
+e. Thao tác với bảng:
+
+*	Hiện danh sách tất cả các bảng: $this->db->list_tables();
+	
+	$tables = $this->db->list_tables();
+
+	foreach ($tables as $table)
+	{
+	   echo $table;
+	} 
+
+*	Kiểm tra sự tồn tại của bảng: $this->db->table_exists([tên bảng]);
+	Hàm trả về giá trị TRUE/FALSE.
+	
+f. Thao tác với Field
+	
+Tên hàm nói lên tất cả.
+
+*	$this->db->list_fields([tên bảng])
+	Usage:
+	$fields = $this->db->list_fields('table_name');
+
+	foreach ($fields as $field)
+	{
+	   echo $field;
+	} 
+	
+*	$this->db->field_exists([tên fields], [tên bảng])
+	Hàm trả về giá trị TRUE/FALSE.
+	
+*	Xem data của field trong table: $this->db->field_data([tên table])
+	KHÔNG PHẢI CSDL NÀO CŨNG HỖ TRỢ CÁI NÀY
+	Ví dụ:
+	
+	$fields = $this->db->field_data('table_name');
+
+	foreach ($fields as $field)
+	{
+		//Phương thức kiểm tra:
+	   echo $field->name; //Hiện tên cột
+	   echo $field->type; // Kiểu giá trị của data
+	   echo $field->max_length; // giá trị lớn nhất của data
+	   echo $field->primary_key; // Ktra trả về 1 nếu là khóa chính
+	} 
+	
+5. Quản lý database:
+- Thư viện quản lý: dbforge
+- Khai báo: $this->load->dgforge();
+// Khai báo thư viện dùng method $this->load->...
+
+*	Tạo database:
+	$this->dbforge->create_database('db_name')
+	Hàm trả về TRUE/FALSE
+
+*	Xóa database:
+	$this->dbforge->drop_database('db_name')
+	Hàm trả về TRUE/FALSE
+
+
+Các hàm quản lý database xem thêm tại:
+http://codeigniter.com/user_guide/database/forge.html
+
